@@ -150,4 +150,4 @@ This is a personal project created for task demonstration.
 
 ---
 
-**Ready to use!** Open http://localhost:5173/ to start exploring the application.
+**Ready to use!** Open https://task-xi-wine.vercel.app/ to start exploring the application.
