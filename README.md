@@ -19,7 +19,7 @@ npm install
 npm run dev
 ```
 
-Visit **http://localhost:5173/** to view the application.
+Visit **https://task-xi-wine.vercel.app/** to view the application.
 
 ## ✨ Features
 
