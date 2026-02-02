@@ -1,10 +1,9 @@
 import React from 'react';
 import StarRating from './StarRating';
-import { calculateAverageRating, getCompanyReviews } from '../utils/storage';
 
 const CompanyCard = ({ company, onClick }) => {
-    const averageRating = parseFloat(calculateAverageRating(company.id));
-    const reviewCount = getCompanyReviews(company.id).length;
+    const averageRating = company.averageRating || 0;
+    const reviewCount = company.reviewCount || 0;
 
     return (
         <div className="company-card-horizontal card">

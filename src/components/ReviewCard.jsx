@@ -22,8 +22,13 @@ const ReviewCard = ({ review }) => {
     };
 
     const avatarColors = ['#8B00FF', '#FF6B6B', '#4ECDC4', '#45B7D1', '#F7DC6F'];
-    const colorIndex = review.id ? parseInt(review.id) % avatarColors.length : 0;
-    const avatarColor = avatarColors[colorIndex];
+    const getAvatarColor = (id) => {
+        if (!id) return avatarColors[0];
+        // Simple hash function for string IDs
+        const hash = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+        return avatarColors[hash % avatarColors.length];
+    };
+    const avatarColor = getAvatarColor(review.id);
 
     return (
         <div className="card review-card">

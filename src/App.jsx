@@ -5,13 +5,7 @@ import CompanyList from './components/CompanyList';
 import CompanyDetail from './components/CompanyDetail';
 import AddCompanyModal from './components/AddCompanyModal';
 import AddReviewModal from './components/AddReviewModal';
-import {
-  getCompanies,
-  addCompany as saveCompany,
-  addReview as saveReview,
-  initializeSampleData,
-  calculateAverageRating
-} from './utils/storage';
+import * as api from './services/api';
 
 function App() {
   const [companies, setCompanies] = useState([]);
@@ -23,55 +17,65 @@ function App() {
   const [showAddCompanyModal, setShowAddCompanyModal] = useState(false);
   const [showAddReviewModal, setShowAddReviewModal] = useState(false);
 
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
   // Load companies on mount
   useEffect(() => {
-    initializeSampleData();
     loadCompanies();
-  }, []);
+  }, [searchQuery, cityFilter, sortBy]);
 
-  const loadCompanies = () => {
-    const loadedCompanies = getCompanies();
-    setCompanies(loadedCompanies);
+  const loadCompanies = async () => {
+    try {
+      setLoading(true);
+      const data = await api.fetchCompanies(searchQuery, cityFilter, sortBy);
+      setCompanies(data);
+
+      // Update selectedCompany if it exists to reflect latest ratings/counts
+      if (selectedCompany) {
+        const updated = data.find(c => c.id === selectedCompany.id);
+        if (updated) setSelectedCompany(updated);
+      }
+
+      setError(null);
+    } catch (err) {
+      setError('Failed to load companies. Please make sure the backend is running.');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Get unique cities for filter
-  const cities = [...new Set(companies.map(c => c.city).filter(Boolean))];
+  const cities = Array.isArray(companies) ? [...new Set(companies.map(c => c.city).filter(Boolean))] : [];
 
-  // Filter companies
-  const filteredCompanies = companies.filter(company => {
-    const matchesSearch = company.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCity = !cityFilter || company.city === cityFilter;
-    return matchesSearch && matchesCity;
-  });
+  // Data is now filtered and sorted on the backend
+  const sortedCompanies = Array.isArray(companies) ? companies : [];
 
-  // Sort companies
-  const sortedCompanies = [...filteredCompanies].sort((a, b) => {
-    switch (sortBy) {
-      case 'name':
-        return a.name.localeCompare(b.name);
-      case 'average':
-        return parseFloat(calculateAverageRating(b.id)) - parseFloat(calculateAverageRating(a.id));
-      case 'rating':
-        return parseFloat(calculateAverageRating(b.id)) - parseFloat(calculateAverageRating(a.id));
-      case 'location':
-        return a.location.localeCompare(b.location);
-      default:
-        return 0;
+  const handleAddCompany = async (companyData) => {
+    try {
+      await api.createCompany(companyData);
+      loadCompanies();
+      setShowAddCompanyModal(false);
+    } catch (err) {
+      alert('Failed to add company. Please try again.');
     }
-  });
-
-  const handleAddCompany = (companyData) => {
-    const newCompany = saveCompany(companyData);
-    loadCompanies();
   };
 
-  const handleAddReview = (reviewData) => {
+  const handleAddReview = async (reviewData) => {
     if (selectedCompany) {
-      saveReview({
-        ...reviewData,
-        companyId: selectedCompany.id
-      });
-      loadCompanies();
+      try {
+        await api.createReview({
+          ...reviewData,
+          companyId: selectedCompany.id
+        });
+        loadCompanies();
+        setShowAddReviewModal(false);
+        // If we're in detail view, we might want to refresh reviews too
+        // The CompanyDetail component will fetch its own reviews
+      } catch (err) {
+        alert('Failed to add review. Please try again.');
+      }
     }
   };
 
@@ -91,7 +95,10 @@ function App() {
         onSearchChange={setSearchQuery}
       />
 
-      {selectedCompany ? (
+      {error && <div className="error-banner">{error}</div>}
+      {loading && !companies.length ? (
+        <div className="loader">Loading companies...</div>
+      ) : selectedCompany ? (
         <CompanyDetail
           company={selectedCompany}
           onBack={handleBackToList}

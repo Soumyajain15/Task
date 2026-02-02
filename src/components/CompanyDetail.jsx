@@ -1,21 +1,30 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import * as api from '../services/api';
 import ReviewCard from './ReviewCard';
 import StarRating from './StarRating';
-import { calculateAverageRating, getCompanyReviews } from '../utils/storage';
 
 const CompanyDetail = ({ company, onBack, onAddReview, sortBy, onSortChange }) => {
-    const averageRating = parseFloat(calculateAverageRating(company.id));
-    const allReviews = getCompanyReviews(company.id);
+    const [reviews, setReviews] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    // Sort reviews
-    let sortedReviews = [...allReviews];
-    if (sortBy === 'recent') {
-        sortedReviews.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    } else if (sortBy === 'highest') {
-        sortedReviews.sort((a, b) => b.rating - a.rating);
-    } else if (sortBy === 'lowest') {
-        sortedReviews.sort((a, b) => a.rating - b.rating);
-    }
+    useEffect(() => {
+        fetchCompanyReviews();
+    }, [company.id, sortBy]);
+
+    const fetchCompanyReviews = async () => {
+        try {
+            setLoading(true);
+            const data = await api.fetchReviews(company.id, sortBy);
+            setReviews(data);
+        } catch (error) {
+            console.error('Error fetching reviews:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const averageRating = company.averageRating || 0;
+    const sortedReviews = reviews;
 
     return (
         <div className="container">
@@ -40,7 +49,7 @@ const CompanyDetail = ({ company, onBack, onAddReview, sortBy, onSortChange }) =
                         <div className="company-stats">
                             <StarRating rating={averageRating} size={20} />
                             <span className="rating-number-large">{averageRating.toFixed(1)}</span>
-                            <span className="review-count">{allReviews.length} Review{allReviews.length !== 1 ? 's' : ''}</span>
+                            <span className="review-count">{reviews.length} Review{reviews.length !== 1 ? 's' : ''}</span>
                         </div>
                     </div>
                 </div>
@@ -73,7 +82,9 @@ const CompanyDetail = ({ company, onBack, onAddReview, sortBy, onSortChange }) =
                     </div>
                 </div>
 
-                {sortedReviews.length === 0 ? (
+                {loading ? (
+                    <div className="loader">Loading reviews...</div>
+                ) : sortedReviews.length === 0 ? (
                     <div className="empty-state">
                         <h3>No reviews yet</h3>
                         <p>Be the first to review this company!</p>
